@@ -1,0 +1,103 @@
+#!/usr/bin/env python
+"""
+pge-tod by Preston Hunt <me@prestonhunt.com>
+
+Compare time-of-day cost versus basic rate for Portland General Electric's Time
+of Day program.
+"""
+
+import argparse
+import csv
+import sys
+
+from datetime import datetime
+from types import SimpleNamespace
+
+
+BASIC_RATE = 14.52
+TOD_RULES_RATES = {
+    'off': (lambda d: d.weekday() in [5, 6] or d.hour < 7 or d.hour >= 21, 7.43),
+    'mid': (lambda d: d.hour >= 7 and d.hour < 17, 11.9),
+    'on': (lambda d: d.hour >= 17 and d.hour < 21, 32.8)
+}
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument('csv_paths', nargs='*', help='csv files from portlandgeneral to process')
+    return parser.parse_args()
+
+
+def main():
+    for path in ARGS.csv_paths:
+        print(compare_tod_to_basic(path))
+
+
+def skip_leader(path):
+    skipping = True
+    with open(path, newline='') as f:
+        for line in f:
+            if skipping and line.count(",") > 5:
+                skipping = False
+            if not skipping:
+                yield line
+
+
+def get_basic_cost(normrow) -> float:
+    return round(BASIC_RATE * normrow.usage_kwh, 2)
+
+
+def get_tod_cost(normrow) -> float:
+    start = normrow.starttime
+    for label, (rule, rate) in TOD_RULES_RATES.items():
+        if rule(start):
+            return round(rate * normrow.usage_kwh, 2)
+    raise Fail("did not find a TOD rate")
+
+
+def normalize_row(row: dict) -> SimpleNamespace:
+    # {'TYPE': 'Electric usage', 'DATE': '2023-10-10', 'START TIME': '01:30', 'END TIME': '01:44', 'USAGE': '0.44', 'UNITS': 'KW', 'DEMAND': '1.78', 'COST': '$0.06', 'NOTES': None}
+    result = SimpleNamespace()
+    result.starttime = datetime.strptime(row['DATE'] + ' ' + row['START TIME'], "%Y-%m-%d %H:%M")
+    result.usage_kwh = float(row['USAGE'])
+    result.charged_cents = int(float(row['COST'].lstrip('$')) * 100)
+    return result
+
+
+def compare_tod_to_basic(path) -> SimpleNamespace:
+    print("processing", path)
+    skip_iter = skip_leader(path)
+    reader = csv.DictReader(skip_iter)
+    tod_cost = 0.0
+    basic_cost = 0.0
+    actual_charged = 0.0
+    for row in reader:
+        normrow = normalize_row(row)
+        normrow.tod = get_tod_cost(normrow)
+        normrow.basic = get_basic_cost(normrow)
+
+        tod_cost += get_basic_cost(normrow)
+        basic_cost += get_basic_cost(normrow)
+
+        actual_charged += normrow.charged_cents
+        print("\t", normrow)
+    return SimpleNamespace(tod_cost_usd=round(tod_cost / 100, 2),
+                           basic_cost_usd=round(basic_cost / 100, 2),
+                           actual_charged=round(actual_charged / 100, 2))
+
+
+class Fail(Exception):
+    pass
+
+
+if __name__ == '__main__':
+    try:
+        # Command-line arguments are considered as immutable constants of the
+        # universe, and thus are globally available in this script.
+        ARGS = parse_args()
+        main()
+    except Fail as f:
+        print(*f.args, file=sys.stderr)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        print("Ctrl+C")
