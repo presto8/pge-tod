@@ -92,8 +92,8 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
         normrow.tod = get_tod_cost(normrow)
         normrow.basic = get_basic_cost(normrow)
 
-        tod_cost += get_basic_cost(normrow)
-        basic_cost += get_basic_cost(normrow)
+        tod_cost += normrow.tod
+        basic_cost += normrow.basic
 
         actual_charged += normrow.charged_cents
         print("\t", normrow)
