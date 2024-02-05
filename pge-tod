@@ -95,11 +95,13 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
         tod_cost += normrow.tod
         basic_cost += normrow.basic
 
-        actual_charged += normrow.charged_cents
+        # As of 2024-02-05, the actual charged amount is completely wrong.
+        # Won't include it until it is more accurate
+        # actual_charged += normrow.charged_cents
         print("\t", normrow)
     return SimpleNamespace(tod_cost_usd=round(tod_cost / 100, 2),
-                           basic_cost_usd=round(basic_cost / 100, 2),
-                           actual_charged=round(actual_charged / 100, 2))
+                           basic_cost_usd=round(basic_cost / 100, 2),)
+                           # actual_charged=round(actual_charged / 100, 2))
 
 
 class Fail(Exception):
