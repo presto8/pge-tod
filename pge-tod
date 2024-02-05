@@ -59,7 +59,7 @@ def normalize_row(row: dict) -> SimpleNamespace:
     # {'TYPE': 'Electric usage', 'DATE': '2023-10-10', 'START TIME': '01:30', 'END TIME': '01:44', 'USAGE': '0.44', 'UNITS': 'KW', 'DEMAND': '1.78', 'COST': '$0.06', 'NOTES': None}
     result = SimpleNamespace()
     result.starttime = datetime.strptime(row['DATE'] + ' ' + row['START TIME'], "%Y-%m-%d %H:%M")
-    result.usage_kwh = float(row['USAGE'])
+    result.usage_kwh = float(row['USAGE (kWh)'])
     result.charged_cents = int(float(row['COST'].lstrip('$')) * 100)
     return result
 
