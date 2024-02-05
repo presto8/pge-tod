@@ -57,10 +57,25 @@ def get_tod_cost(normrow) -> float:
 
 
 def normalize_row(row: dict) -> SimpleNamespace:
-    # {'TYPE': 'Electric usage', 'DATE': '2023-10-10', 'START TIME': '01:30', 'END TIME': '01:44', 'USAGE': '0.44', 'UNITS': 'KW', 'DEMAND': '1.78', 'COST': '$0.06', 'NOTES': None}
+    # PGE has used multiple formats, including:
+    #
+    #    TYPE,DATE,START TIME,END TIME,USAGE,UNITS,DEMAND,UNITS,COST,NOTES
+    #    Electric usage,2023-10-10,00:00,00:14,0.38,KWH,1.52,KW,$0.05
+    #
+    #    TYPE,DATE,START TIME,END TIME,USAGE (kWh),COST,NOTES
+    #    Electric usage,2024-01-11,00:00,00:14,0.45,$0.03
+
+    # Find out the field name for usage
+    for field in row.keys():
+        if 'usage' in field.lower():
+            usage_field = field
+            break
+    else:
+        raise Exception("unsupported or invalid CSV format, unable to find USAGE field")
+
     result = SimpleNamespace()
     result.starttime = datetime.strptime(row['DATE'] + ' ' + row['START TIME'], "%Y-%m-%d %H:%M")
-    result.usage_kwh = float(row['USAGE'])
+    result.usage_kwh = float(row[usage_field])
     result.charged_cents = int(float(row['COST'].lstrip('$')) * 100)
     return result
 
