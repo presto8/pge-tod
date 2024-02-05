@@ -14,11 +14,12 @@ from datetime import datetime
 from types import SimpleNamespace
 
 
-BASIC_RATE = 14.52
+# Rates as of 2024-02-05
+BASIC_RATE = 19.45
 TOD_RULES_RATES = {
-    'off': (lambda d: d.weekday() in [5, 6] or d.hour < 7 or d.hour >= 21, 7.43),
-    'mid': (lambda d: d.hour >= 7 and d.hour < 17, 11.9),
-    'on': (lambda d: d.hour >= 17 and d.hour < 21, 32.8)
+    'off': (lambda d: d.weekday() in [5, 6] or d.hour < 7 or d.hour >= 21, 8.39),
+    'mid': (lambda d: d.hour >= 7 and d.hour < 17, 15.77),
+    'on': (lambda d: d.hour >= 17 and d.hour < 21, 41.11)
 }
 
 
