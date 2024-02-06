@@ -14,19 +14,20 @@ from datetime import datetime
 from types import SimpleNamespace
 
 
-# Rates as of 2024-02-05
-BASIC_RATE = 19.45
-
+# Rates before 2024-01-01
 OLD_TOD_RATES = {
     'off': 7.43,
     'mid': 11.9,
-    'on': 32.8
+    'on': 32.8,
+    'basic': 14.52
 }
 
+# Rates on or after 2024-01-01
 NEW_TOD_RATES = {
     'off': 8.39,
     'mid': 15.77,
-    'on': 41.11
+    'on': 41.11,
+    'basic': 19.45
 }
 
 
@@ -51,10 +52,6 @@ def skip_leader(path):
                 yield line
 
 
-def get_basic_cost(normrow) -> float:
-    return round(BASIC_RATE * normrow.usage_kwh, 2)
-
-
 def get_tod_category(d: datetime) -> str:
     # Off-peak on: 1/1, 7/4, 12/25 plus Mem Day, Lab Day, 1st Mon Sep, Thksgiving
     holidays = [(1,1), (7,4), (12,25)]
@@ -74,6 +71,12 @@ def get_tod_rate(normrow) -> float:
         return OLD_TOD_RATES[normrow.tod_category]
     return NEW_TOD_RATES[normrow.tod_category]
 #    raise Fail("did not find a TOD rate")
+
+
+def get_basic_rate(normrow) -> float:
+    if normrow.starttime < datetime(2024, 1, 1):
+        return OLD_TOD_RATES['basic']
+    return NEW_TOD_RATES['basic']
 
 
 def normalize_row(row: dict) -> SimpleNamespace:
@@ -104,7 +107,8 @@ def normalize_row(row: dict) -> SimpleNamespace:
     # kWh is provided with 2 significant digits; thus round the output to the same number of digits
     result.tod_rate = get_tod_rate(result)
     result.tod_cost_cents = round(result.tod_rate * result.usage_kwh, 2)
-    result.basic_cost_cents = round(BASIC_RATE * result.usage_kwh, 2)
+    result.basic_rate = get_basic_rate(result)
+    result.basic_cost_cents = round(result.basic_rate * result.usage_kwh, 2)
     return result
 
 
