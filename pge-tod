@@ -106,9 +106,9 @@ def normalize_row(row: dict) -> SimpleNamespace:
     result.tod_category = get_tod_category(result.starttime)
     # kWh is provided with 2 significant digits; thus round the output to the same number of digits
     result.tod_rate = get_tod_rate(result)
-    result.tod_cost_cents = round(result.tod_rate * result.usage_kwh, 2)
+    result.tod_cost_cents = result.tod_rate * result.usage_kwh
     result.basic_rate = get_basic_rate(result)
-    result.basic_cost_cents = round(result.basic_rate * result.usage_kwh, 2)
+    result.basic_cost_cents = result.basic_rate * result.usage_kwh
     return result
 
 
