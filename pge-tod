@@ -10,6 +10,7 @@ import argparse
 import csv
 import sys
 
+from collections import Counter
 from datetime import datetime
 from types import SimpleNamespace
 
@@ -118,6 +119,7 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
     reader = csv.DictReader(skip_iter)
     tod_cost = 0.0
     basic_cost = 0.0
+    kwh_by_peak = Counter()
     earliest = None
     latest = None
     n = 0
@@ -131,12 +133,15 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
         if latest is None or normrow.starttime > latest:
             latest = normrow.starttime
 
+        kwh_by_peak[normrow.tod_category] += normrow.usage_kwh
+
         tod_cost += normrow.tod_cost_cents
         basic_cost += normrow.basic_cost_cents
         print("\t", normrow)
     return SimpleNamespace(earliest=earliest,
                            latest=latest,
                            n=n,
+                           kwh_by_peak=kwh_by_peak,
                            tod_cost_usd=round(tod_cost / 100, 2),
                            basic_cost_usd=round(basic_cost / 100, 2))
 
