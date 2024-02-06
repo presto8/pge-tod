@@ -16,10 +16,10 @@ from types import SimpleNamespace
 
 # Rates as of 2024-02-05
 BASIC_RATE = 19.45
-TOD_RULES_RATES = {
-    'off': (lambda d: d.weekday() in [5, 6] or d.hour < 7 or d.hour >= 21, 8.39),
-    'mid': (lambda d: d.hour >= 7 and d.hour < 17, 15.77),
-    'on': (lambda d: d.hour >= 17 and d.hour < 21, 41.11)
+TOD_RATES = {
+    'off': 8.39,
+    'mid': 15.77,
+    'on': 41.11
 }
 
 
@@ -48,12 +48,23 @@ def get_basic_cost(normrow) -> float:
     return round(BASIC_RATE * normrow.usage_kwh, 2)
 
 
-def get_tod_cost(normrow) -> float:
-    start = normrow.starttime
-    for label, (rule, rate) in TOD_RULES_RATES.items():
-        if rule(start):
-            return round(rate * normrow.usage_kwh, 2)
-    raise Fail("did not find a TOD rate")
+def get_tod_category(d: datetime) -> str:
+    # Off-peak on: 1/1, 7/4, 12/25 plus Mem Day, Lab Day, 1st Mon Sep, Thksgiving
+    holidays = [(1,1), (7,4), (12,25)]
+    if (d.month, d.day) in holidays:
+        return 'off'
+    if d.weekday() in [5, 6]:  # Sat or Sun
+        return 'off'
+    if d.hour < 7 or d.hour > 21:
+        return 'off'
+    if d.hour >= 7 and d.hour <= 17:
+        return 'mid'
+    return 'on'
+
+
+def get_tod_rate(category: str) -> float:
+    return TOD_RATES[category]
+#    raise Fail("did not find a TOD rate")
 
 
 def normalize_row(row: dict) -> SimpleNamespace:
@@ -76,7 +87,14 @@ def normalize_row(row: dict) -> SimpleNamespace:
     result = SimpleNamespace()
     result.starttime = datetime.strptime(row['DATE'] + ' ' + row['START TIME'], "%Y-%m-%d %H:%M")
     result.usage_kwh = float(row[usage_field])
-    result.charged_cents = int(float(row['COST'].lstrip('$')) * 100)
+
+    # As of 2024-02-05, the charged amount from PGE's CSV report is completely wrong.
+    # Won't include it until it is more accurate
+    # result.charged_cents = int(float(row['COST'].lstrip('$')) * 100)
+    result.tod_category = get_tod_category(result.starttime)
+    # kWh is provided with 2 significant digits; thus round the output to the same number of digits
+    result.tod_cost = round(get_tod_rate(result.tod_category) * result.usage_kwh, 2)
+    result.basic_cost = round(BASIC_RATE * result.usage_kwh, 2)
     return result
 
 
@@ -86,22 +104,27 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
     reader = csv.DictReader(skip_iter)
     tod_cost = 0.0
     basic_cost = 0.0
-    actual_charged = 0.0
+    earliest = None
+    latest = None
+    readings = 0
     for row in reader:
+        readings += 1
+
         normrow = normalize_row(row)
-        normrow.tod = get_tod_cost(normrow)
-        normrow.basic = get_basic_cost(normrow)
 
-        tod_cost += normrow.tod
-        basic_cost += normrow.basic
+        if earliest is None or normrow.starttime < earliest:
+            earliest = normrow.starttime
+        if latest is None or normrow.starttime > latest:
+            latest = normrow.starttime
 
-        # As of 2024-02-05, the actual charged amount is completely wrong.
-        # Won't include it until it is more accurate
-        # actual_charged += normrow.charged_cents
+        tod_cost += normrow.tod_cost
+        basic_cost += normrow.basic_cost
         print("\t", normrow)
-    return SimpleNamespace(tod_cost_usd=round(tod_cost / 100, 2),
-                           basic_cost_usd=round(basic_cost / 100, 2),)
-                           # actual_charged=round(actual_charged / 100, 2))
+    return SimpleNamespace(earliest=earliest,
+                           latest=latest,
+                           readings=readings,
+                           tod_cost_usd=round(tod_cost / 100, 2),
+                           basic_cost_usd=round(basic_cost / 100, 2))
 
 
 class Fail(Exception):
