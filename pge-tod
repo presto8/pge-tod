@@ -68,16 +68,16 @@ def get_tod_category(d: datetime) -> str:
 
 def is_pge_holiday(d: datetime) -> bool:
     # Off-peak on: 1/1, 7/4, Christmas, Memorial Day, Labor Day, Thanksgiving
-    holidays = [(1,1), (7,4), (12,25)]
+    holidays = [(1, 1), (7, 4), (12, 25)]
     if (d.month, d.day) in holidays:
         return True
 
     # Memorial Day, last Monday of May
-    if d.month == 5 and d.dow == 0 and d.day >= 25:
+    if d.month == 5 and d.weekday() == 0 and d.day >= 25:
         return True
 
     # Labor Day, first Monday of September
-    if d.month == 9 and d.dow == 0 and d.day <= 7:
+    if d.month == 9 and d.weekday() == 0 and d.day <= 7:
         return True
 
     return False
