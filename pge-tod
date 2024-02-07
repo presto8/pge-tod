@@ -120,7 +120,7 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
     reader = csv.DictReader(skip_iter)
     tod_cost = D(0)
     basic_cost = D(0)
-    kwh_by_peak = Counter()
+    kwh_by_peak: Counter[D] = Counter()
     earliest = None
     latest = None
     n = 0
