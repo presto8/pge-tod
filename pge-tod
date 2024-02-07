@@ -12,23 +12,24 @@ import sys
 
 from collections import Counter
 from datetime import datetime
+from decimal import Decimal as D
 from types import SimpleNamespace
 
 
 # Rates before 2024-01-01
 OLD_TOD_RATES = {
-    'off': 7.43,
-    'mid': 11.9,
-    'on': 32.8,
-    'basic': 14.52
+    'off': D('7.43'),
+    'mid': D('11.9'),
+    'on': D('32.8'),
+    'basic': D('14.52')
 }
 
 # Rates on or after 2024-01-01
 NEW_TOD_RATES = {
-    'off': 8.39,
-    'mid': 15.77,
-    'on': 41.11,
-    'basic': 19.45
+    'off': D('8.39'),
+    'mid': D('15.77'),
+    'on': D('41.11'),
+    'basic': D('19.45')
 }
 
 
@@ -67,14 +68,14 @@ def get_tod_category(d: datetime) -> str:
     return 'on'
 
 
-def get_tod_rate(normrow) -> float:
+def get_tod_rate(normrow) -> D:
     if normrow.starttime < datetime(2024, 1, 1):
         return OLD_TOD_RATES[normrow.tod_category]
     return NEW_TOD_RATES[normrow.tod_category]
 #    raise Fail("did not find a TOD rate")
 
 
-def get_basic_rate(normrow) -> float:
+def get_basic_rate(normrow) -> D:
     if normrow.starttime < datetime(2024, 1, 1):
         return OLD_TOD_RATES['basic']
     return NEW_TOD_RATES['basic']
@@ -99,7 +100,7 @@ def normalize_row(row: dict) -> SimpleNamespace:
 
     result = SimpleNamespace()
     result.starttime = datetime.strptime(row['DATE'] + ' ' + row['START TIME'], "%Y-%m-%d %H:%M")
-    result.usage_kwh = float(row[usage_field])
+    result.usage_kwh = D(row[usage_field])
 
     # As of 2024-02-05, the charged amount from PGE's CSV report is completely wrong.
     # Won't include it until it is more accurate
@@ -117,8 +118,8 @@ def compare_tod_to_basic(path) -> SimpleNamespace:
     print("processing", path)
     skip_iter = skip_leader(path)
     reader = csv.DictReader(skip_iter)
-    tod_cost = 0.0
-    basic_cost = 0.0
+    tod_cost = D(0)
+    basic_cost = D(0)
     kwh_by_peak = Counter()
     earliest = None
     latest = None
