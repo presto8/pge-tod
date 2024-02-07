@@ -55,9 +55,7 @@ def skip_leader(path):
 
 
 def get_tod_category(d: datetime) -> str:
-    # Off-peak on: 1/1, 7/4, 12/25 plus Mem Day, Lab Day, 1st Mon Sep, Thksgiving
-    holidays = [(1,1), (7,4), (12,25)]
-    if (d.month, d.day) in holidays:
+    if is_pge_holiday(d):
         return 'off'
     if d.weekday() in [5, 6]:  # Sat or Sun
         return 'off'
@@ -66,6 +64,23 @@ def get_tod_category(d: datetime) -> str:
     if d.hour >= 7 and d.hour < 17:
         return 'mid'
     return 'on'
+
+
+def is_pge_holiday(d: datetime) -> bool:
+    # Off-peak on: 1/1, 7/4, Christmas, Memorial Day, Labor Day, Thanksgiving
+    holidays = [(1,1), (7,4), (12,25)]
+    if (d.month, d.day) in holidays:
+        return True
+
+    # Memorial Day, last Monday of May
+    if d.month == 5 and d.dow == 0 and d.day >= 25:
+        return True
+
+    # Labor Day, first Monday of September
+    if d.month == 9 and d.dow == 0 and d.day <= 7:
+        return True
+
+    return False
 
 
 def get_tod_rate(normrow) -> D:
