@@ -11,25 +11,29 @@ import csv
 import sys
 
 from collections import Counter
-from datetime import datetime
+from datetime import datetime, date
 from decimal import Decimal as D
 from types import SimpleNamespace
 
-
-# Rates before 2024-01-01
-OLD_TOD_RATES = {
-    'off': D('7.43'),
-    'mid': D('11.9'),
-    'on': D('32.8'),
-    'basic': D('14.52')
-}
-
-# Rates on or after 2024-01-01
-NEW_TOD_RATES = {
-    'off': D('8.39'),
-    'mid': D('15.77'),
-    'on': D('41.11'),
-    'basic': D('19.45')
+RATES = {
+    date(2025, 1, 1): {
+        'off': D('9.08'),
+        'mid': D('16.99'),
+        'on': D('43.89'),
+        'basic': D('20.86')
+    },
+    date(2024, 1, 1): {
+        'off': D('8.39'),
+        'mid': D('15.77'),
+        'on': D('41.11'),
+        'basic': D('19.45')
+    },
+    date(1970, 1, 1): {
+        'off': D('7.43'),
+        'mid': D('11.9'),
+        'on': D('32.8'),
+        'basic': D('14.52')
+    },
 }
 
 
@@ -84,10 +88,10 @@ def is_pge_holiday(d: datetime) -> bool:
 
 
 def get_tod_rate(normrow) -> D:
-    if normrow.starttime < datetime(2024, 1, 1):
-        return OLD_TOD_RATES[normrow.tod_category]
-    return NEW_TOD_RATES[normrow.tod_category]
-#    raise Fail("did not find a TOD rate")
+    for effective_on, rates in RATES.items():
+        if normrow.starttime.date() >= effective_on:
+            return rates[normrow.tod_category]
+    raise Fail("did not find a TOD rate")
 
 
 def get_basic_rate(normrow) -> D:
